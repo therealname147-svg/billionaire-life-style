@@ -17,6 +17,85 @@ function makePerson(skin:number,shirt:number,legs:number){
  for(const x of [-.54,.54]){const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.115,.64,7,10),shirtMat);arm.position.set(x,1.34,0);arm.name="arm";arm.castShadow=true;g.add(arm);const hand=new THREE.Mesh(new THREE.SphereGeometry(.12,12,10),skinMat);hand.position.set(x,1.0,0);g.add(hand)}return g;
 }
 
+function makePlayerCharacter(){
+ const g=new THREE.Group();
+ const skinMat=new THREE.MeshStandardMaterial({color:0x8a5a3c,roughness:.62,metalness:0});
+ const skinLight=new THREE.MeshStandardMaterial({color:0x9d6a49,roughness:.58});
+ const topMat=new THREE.MeshStandardMaterial({color:0x2f6f69,roughness:.72});
+ const shortsMat=new THREE.MeshStandardMaterial({color:0x8b6335,roughness:.78});
+ const bootMat=new THREE.MeshStandardMaterial({color:0x4a2d1d,roughness:.72});
+ const hairMat=new THREE.MeshStandardMaterial({color:0x25130e,roughness:.82});
+ const darkMat=new THREE.MeshStandardMaterial({color:0x17171a,roughness:.72});
+ const eyeWhite=new THREE.MeshStandardMaterial({color:0xf4eee6,roughness:.4});
+ const irisMat=new THREE.MeshStandardMaterial({color:0x24150e,roughness:.35});
+
+ const pelvis=new THREE.Mesh(new THREE.CapsuleGeometry(.34,.30,8,16),shortsMat);
+ pelvis.position.y=.91; pelvis.scale.set(1.12,.85,.82); pelvis.castShadow=true; g.add(pelvis);
+
+ const waist=new THREE.Mesh(new THREE.CylinderGeometry(.30,.34,.18,16),topMat);
+ waist.position.y=1.08; waist.castShadow=true; g.add(waist);
+
+ const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.38,.64,10,20),topMat);
+ torso.position.y=1.42; torso.scale.set(1.05,1.02,.72); torso.castShadow=true; g.add(torso);
+
+ const chest=new THREE.Mesh(new THREE.SphereGeometry(.34,20,14),topMat);
+ chest.position.set(0,1.56,.01); chest.scale.set(1.08,.72,.68); chest.castShadow=true; g.add(chest);
+
+ const neck=new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.20,14),skinMat);
+ neck.position.y=1.91; neck.castShadow=true; g.add(neck);
+
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.34,24,18),skinLight);
+ head.position.set(0,2.22,.015); head.scale.set(.91,1.10,.86); head.castShadow=true; g.add(head);
+
+ const jaw=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),skinLight);
+ jaw.position.set(0,2.08,.13); jaw.scale.set(.96,.72,.72); jaw.castShadow=true; g.add(jaw);
+
+ const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.37,24,16,0,Math.PI*2,0,Math.PI*.62),hairMat);
+ hairCap.position.set(0,2.35,-.01); hairCap.scale.set(1.01,1.02,.96); hairCap.castShadow=true; g.add(hairCap);
+
+ const pony=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.52,8,12),hairMat);
+ pony.position.set(-.22,2.15,-.18); pony.rotation.z=-.25; pony.castShadow=true; g.add(pony);
+
+ for(const x of [-.145,.145]){
+   const eye=new THREE.Mesh(new THREE.SphereGeometry(.045,12,10),eyeWhite);
+   eye.position.set(x,2.25,.315); eye.scale.set(1,.78,.55); g.add(eye);
+   const iris=new THREE.Mesh(new THREE.SphereGeometry(.021,10,8),irisMat);
+   iris.position.set(x,2.25,.343); g.add(iris);
+   const brow=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,.025),darkMat);
+   brow.position.set(x,2.315,.322); brow.rotation.z=x<0?.08:-.08; g.add(brow);
+ }
+ const nose=new THREE.Mesh(new THREE.ConeGeometry(.045,.105,8),skinLight);
+ nose.rotation.x=Math.PI/2; nose.position.set(0,2.17,.34); g.add(nose);
+ const lips=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),new THREE.MeshStandardMaterial({color:0x7f3f3c,roughness:.5}));
+ lips.position.set(0,2.08,.325); lips.scale.set(1.45,.5,.45); g.add(lips);
+ for(const x of [-.345,.345]){
+   const ear=new THREE.Mesh(new THREE.SphereGeometry(.06,12,10),skinLight);
+   ear.position.set(x,2.20,.005); ear.scale.set(.72,1.1,.7); g.add(ear);
+ }
+
+ for(const x of [-.21,.21]){
+   const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.145,.40,8,12),shortsMat);
+   thigh.position.set(x,.69,.005); thigh.name="leg"; thigh.castShadow=true; g.add(thigh);
+   const shin=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.48,8,12),skinLight);
+   shin.position.set(x,.34,.02); shin.name="leg"; shin.castShadow=true; g.add(shin);
+   const boot=new THREE.Mesh(new THREE.BoxGeometry(.25,.27,.46),bootMat);
+   boot.position.set(x,.10,.10); boot.castShadow=true; g.add(boot);
+   const sole=new THREE.Mesh(new THREE.BoxGeometry(.27,.055,.49),darkMat);
+   sole.position.set(x,-.02,.10); sole.castShadow=true; g.add(sole);
+ }
+
+ for(const x of [-.48,.48]){
+   const upper=new THREE.Mesh(new THREE.CapsuleGeometry(.105,.34,8,12),topMat);
+   upper.position.set(x,1.48,0); upper.name="arm"; upper.castShadow=true; g.add(upper);
+   const fore=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.34,8,12),skinLight);
+   fore.position.set(x,1.20,.01); fore.name="arm"; fore.castShadow=true; g.add(fore);
+   const hand=new THREE.Mesh(new THREE.SphereGeometry(.10,12,10),skinLight);
+   hand.position.set(x,1.00,.02); hand.castShadow=true; g.add(hand);
+ }
+ g.userData.isPlayerCharacter=true;
+ return g;
+}
+
 function makeCar(color:number){
  const g=new THREE.Group(); const paint=new THREE.MeshStandardMaterial({color,metalness:.45,roughness:.3}); const glass=new THREE.MeshStandardMaterial({color:0x263b43,metalness:.2,roughness:.15});
  const base=new THREE.Mesh(new THREE.BoxGeometry(2.15,.58,4.35),paint);base.position.y=.58;base.castShadow=true;g.add(base);
@@ -43,7 +122,7 @@ export default function Home(){
     const canvas=document.createElement("canvas");canvas.width=512;canvas.height=128;const ctx=canvas.getContext("2d")!;ctx.fillStyle="#ffffff";ctx.font="bold 34px Arial";ctx.textAlign="center";ctx.fillText(name,256,55);ctx.font="18px Arial";ctx.fillText("LAGOS DISTRICT",256,88);const tex=new THREE.CanvasTexture(canvas);const label=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));label.position.set(x,9,z);label.scale.set(35,9,1);scene.add(label)}
   const buildingColliders:Array<{x:number;z:number;half:number}>=[];
   const buildingMat=new THREE.MeshStandardMaterial({color:0xb58e6b,roughness:.82});const glass=new THREE.MeshStandardMaterial({color:0x315866,metalness:.35,roughness:.2});
-  for(let x=-260;x<=260;x+=30)for(let z=-260;z<=260;z+=30){if(Math.abs(x)%62<24||Math.abs(z)%62<24)continue;const h=9+Math.abs((x*3+z*5)%24);const b=new THREE.Mesh(new THREE.BoxGeometry(18,h,18),Math.abs(x+z)%90===0?glass:buildingMat);b.position.set(x,h/2,z);b.castShadow=true;b.receiveShadow=true;scene.add(b);
+  for(let x=-260;x<=260;x+=30)for(let z=-260;z<=260;z+=30){if(Math.abs(x)%62<24||Math.abs(z)%62<24)continue;const h=9+Math.abs((x*3+z*5)%24);const b=new THREE.Mesh(new THREE.BoxGeometry(18,h,18),Math.abs(x+z)%90===0?glass:buildingMat);b.position.set(x,h/2,z);b.castShadow=true;b.receiveShadow=true;scene.add(b);buildingColliders.push({x,z,half:9.8});
     for(let y=3;y<h-1;y+=3){for(const side of [-1,1]){const win=new THREE.Mesh(new THREE.BoxGeometry(18.05,.72,1),new THREE.MeshBasicMaterial({color:0x9bb8b7}));win.position.set(x,y,z+side*9.08);scene.add(win)}}
   }
   const treeMat=new THREE.MeshStandardMaterial({color:0x28583d});for(let i=0;i<140;i++){const a=i*2.399,r=150+(i%9)*7,t=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.25,2,7),new THREE.MeshStandardMaterial({color:0x684a31}));trunk.position.y=1;t.add(trunk);const crown=new THREE.Mesh(new THREE.SphereGeometry(1.45,8,6),treeMat);crown.position.y=2.7;t.add(crown);t.position.set(Math.cos(a)*r,0,Math.sin(a)*r);scene.add(t)}
@@ -52,7 +131,7 @@ export default function Home(){
   for(let i=0;i<30;i++){const axis=i%2?"z":"x";const g=makeCar(colors[i%colors.length]);const lane=(i%4<2?-1:1)*(i%7%2?5:2.7);const speed=(9+i%5*1.4)*(i%3?1:-1);g.position.set(axis==="x"?-285:lane,.0,axis==="z"?-285:lane);if(axis==="x")g.rotation.y=speed>0?Math.PI/2:-Math.PI/2;else g.rotation.y=speed>0?0:Math.PI;scene.add(g);traffic.push({g,axis,speed,lane})}
   const npcSkins=[0x704a35,0x8a5b40,0x5c3c2e,0x9a6b4c];const npcs:THREE.Group[]=[];
   for(let i=0;i<44;i++){const n=makePerson(npcSkins[i%4],[0x263f50,0x8b4a3b,0x5d426d,0x75643f,0xeeeeea][i%5],[0x222a32,0x3c3030,0x4b3a29][i%3]);n.position.set(((i*47)%500)-250,0,((i*71)%500)-250);n.userData.v=.45+(i%4)*.12;n.userData.axis=i%2?"x":"z";npcs.push(n);scene.add(n)}
-  const player=makePerson(0x754f35,0x1d2734,0x252a31);player.position.set(0,0,7);scene.add(player);
+  const player=makePlayerCharacter();player.position.set(0,0,7);scene.add(player);
   const keys:Record<string,boolean>={};const down=(e:KeyboardEvent)=>{keys[e.key.toLowerCase()]=true};const up=(e:KeyboardEvent)=>{keys[e.key.toLowerCase()]=false};addEventListener("keydown",down);addEventListener("keyup",up);
   const clock=new THREE.Clock();let raf=0;let walkTime=0;const collides=(x:number,z:number)=>buildingColliders.some(b=>Math.abs(x-b.x)<b.half+.72&&Math.abs(z-b.z)<b.half+.72);function animate(){const dt=Math.min(clock.getDelta(),.05);let dx=0,dz=0;if(keys.w||keys.arrowup)dz-=1;if(keys.s||keys.arrowdown)dz+=1;if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;const moving=dx||dz;const len=Math.hypot(dx,dz)||1;const nx=THREE.MathUtils.clamp(player.position.x+dx/len*10*dt,-285,285);const nz=THREE.MathUtils.clamp(player.position.z+dz/len*10*dt,-285,285);if(!collides(nx,player.position.z))player.position.x=nx;if(!collides(player.position.x,nz))player.position.z=nz;if(moving){player.rotation.y=Math.atan2(dx,dz);walkTime+=dt*9;player.traverse(o=>{if(o.name==="arm")o.rotation.x=Math.sin(walkTime)*.42;if(o.name==="leg")o.rotation.x=-Math.sin(walkTime)*.5})}else{player.traverse(o=>{if(o.name==="arm")o.rotation.x=0;if(o.name==="leg")o.rotation.x=0});player.position.y=0}
     for(const t of traffic){if(t.axis==="x"){t.g.position.x+=t.speed*dt;if(t.g.position.x>300)t.g.position.x=-300;if(t.g.position.x<-300)t.g.position.x=300}else{t.g.position.z+=t.speed*dt;if(t.g.position.z>300)t.g.position.z=-300;if(t.g.position.z<-300)t.g.position.z=300}}
@@ -62,5 +141,5 @@ export default function Home(){
   return()=>{cancelAnimationFrame(raf);removeEventListener("keydown",down);removeEventListener("keyup",up);removeEventListener("resize",resize);renderer.dispose();ref.current?.removeChild(renderer.domElement)}
  },[]);
  const visit=(name:string)=>setNotice(name+" — location system ready for interaction");
- return <main><div ref={ref} className="scene"/><div className="hud"><div><b>BILLIONAIRE LIFE STYLE</b><small>LAGOS • OPEN WORLD • DISTRICTS</small></div><strong>₦{money.toLocaleString()}</strong></div><aside className="phone"><div className="phone-title">CITY LIFE</div>{locations.map(([n])=><button key={n} onClick={()=>visit(n)}>{n}<span>›</span></button>)}</aside><div className="status">{notice}</div><div className="hint">WASD / ARROWS • Walk / Run &nbsp; | &nbsp; 4 DISTRICTS • TRAFFIC • PEDESTRIANS</div></main>
+ return <main><div ref={ref} className="scene"/><div className="hud"><div><b>BILLIONAIRE LIFE STYLE</b><small>LAGOS • OPEN WORLD • DISTRICTS</small></div><strong>₦{money.toLocaleString()}</strong></div><aside className="phone"><div className="phone-title">CITY LIFE</div>{locations.map(([n])=><button key={n} onClick={()=>visit(n)}>{n}<span>›</span></button>)}</aside><div className="status">{notice}</div><div className="hint">WASD / ARROWS • WALK / RUN &nbsp; | &nbsp; CHARACTER COLLISION ACTIVE • 4 DISTRICTS • TRAFFIC • PEDESTRIANS</div></main>
 }
