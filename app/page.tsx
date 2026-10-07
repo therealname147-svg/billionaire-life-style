@@ -111,7 +111,7 @@ export default function Home(){
   if(!ref.current)return;
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x92b4ba);scene.fog=new THREE.Fog(0x92b4ba,45,330);
   const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,800);camera.position.set(0,5.8,14);
-  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;ref.current.appendChild(renderer.domElement);
+  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;ref.current.appendChild(renderer.domElement);
   scene.add(new THREE.HemisphereLight(0xffead1,0x253b35,2.3));const sun=new THREE.DirectionalLight(0xfff0d2,3.2);sun.position.set(-80,120,60);sun.castShadow=true;scene.add(sun);
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.MeshStandardMaterial({color:0x426b4d,roughness:1}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
   const roadMat=new THREE.MeshStandardMaterial({color:0x25282a,roughness:.94});const sidewalk=new THREE.MeshStandardMaterial({color:0x85817a,roughness:.95});
@@ -135,20 +135,64 @@ export default function Home(){
   const player=new THREE.Group();
   player.position.set(0,0,7);player.userData.isPlayer=true;scene.add(player);
   const loader=new GLTFLoader();
-  const characterUrl="https://raw.githubusercontent.com/Flynsarmy/gd-character-creation/master/Godot/Character%20Creation/characters/human/human_female/human_female.glb";
+  const characterUrl="https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-app/main/static/models-variation/human/female.glb";
+  const animationUrl="https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-app/main/static/animations/human-base-animations.glb";
+
+  const setupCharacterMaterials=(root:THREE.Object3D)=>{
+    const skin=new THREE.MeshStandardMaterial({color:0x9a6548,roughness:.78,metalness:0});
+    const skinDark=new THREE.MeshStandardMaterial({color:0x74432f,roughness:.82,metalness:0});
+    const hair=new THREE.MeshStandardMaterial({color:0x24140f,roughness:.9,metalness:0});
+    const cloth=new THREE.MeshStandardMaterial({color:0x2d5e63,roughness:.78,metalness:0});
+    const clothDark=new THREE.MeshStandardMaterial({color:0x3b2b22,roughness:.82,metalness:0});
+    const shoe=new THREE.MeshStandardMaterial({color:0x17191c,roughness:.72,metalness:0});
+    const eye=new THREE.MeshStandardMaterial({color:0x24150e,roughness:.38,metalness:0});
+    const box=new THREE.Box3().setFromObject(root);
+    const minY=box.min.y;
+    const height=Math.max(box.max.y-box.min.y,.001);
+    root.traverse((o:any)=>{
+      if(!o.isMesh) return;
+      o.castShadow=true;o.receiveShadow=true;
+      const n=(o.name||"").toLowerCase();
+      const y=(o.getWorldPosition(new THREE.Vector3()).y-minY)/height;
+      if(/hair|head_hair|ponytail|braid/.test(n)) o.material=hair;
+      else if(/eye|iris|pupil|brow/.test(n)) o.material=eye;
+      else if(/shoe|boot|sole/.test(n)) o.material=shoe;
+      else if(/shirt|top|jacket|dress|sleeve|torso|chest/.test(n)) o.material=cloth;
+      else if(/short|pant|trouser|skirt|bottom/.test(n)) o.material=clothDark;
+      else if(y>.78 || /head|face|neck|arm|hand|leg|foot|skin|body/.test(n)) o.material=skin;
+    });
+  };
+
   loader.load(characterUrl,(gltf)=>{
     const model=gltf.scene;
-    model.traverse((o:any)=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.needsUpdate=true}}});
-    const box=new THREE.Box3().setFromObject(model);const size=box.getSize(new THREE.Vector3());const center=box.getCenter(new THREE.Vector3());
-    const targetHeight=2.35;const scale=targetHeight/Math.max(size.y,.001);model.scale.setScalar(scale);
-    model.position.x=-center.x*scale;model.position.y=-box.min.y*scale;model.position.z=-center.z*scale;
+    setupCharacterMaterials(model);
+    const box=new THREE.Box3().setFromObject(model);
+    const size=box.getSize(new THREE.Vector3());
+    const center=box.getCenter(new THREE.Vector3());
+    const targetHeight=2.25;
+    const scale=targetHeight/Math.max(size.y,.001);
+    model.scale.setScalar(scale);
+    model.position.set(-center.x*scale,-box.min.y*scale,-center.z*scale);
     player.add(model);
     player.userData.model=model;
-    if(gltf.animations.length){player.userData.mixer=new THREE.AnimationMixer(model);const clips=gltf.animations;const preferred=clips.find((c)=>/walk|jog|run/i.test(c.name))||clips[0];player.userData.action=player.userData.mixer.clipAction(preferred);player.userData.action.loop=THREE.LoopRepeat;}
+    player.userData.mixer=new THREE.AnimationMixer(model);
+    player.userData.ready=true;
     setNotice("Character loaded");
+    loader.load(animationUrl,(animGltf)=>{
+      const mixer=player.userData.mixer as THREE.AnimationMixer;
+      const clips=animGltf.animations||[];
+      const idleClip=clips.find((c)=>/idle|stand|breath/i.test(c.name));
+      const walkClip=clips.find((c)=>/walk|jog|run/i.test(c.name))||clips[0];
+      player.userData.idle=mixer.clipAction(idleClip||walkClip);
+      player.userData.walk=mixer.clipAction(walkClip||idleClip);
+      player.userData.activeAction=null;
+      const idle=player.userData.idle;
+      if(idle){idle.reset().fadeIn(.2).play();player.userData.activeAction=idle;}
+      setNotice("Character + animation system ready");
+    },undefined,()=>setNotice("Character loaded; animation library unavailable"));
   },undefined,()=>setNotice("Character asset could not load"));
   const keys:Record<string,boolean>={};const down=(e:KeyboardEvent)=>{keys[e.key.toLowerCase()]=true};const up=(e:KeyboardEvent)=>{keys[e.key.toLowerCase()]=false};addEventListener("keydown",down);addEventListener("keyup",up);
-  const clock=new THREE.Clock();let raf=0;let walkTime=0;const collides=(x:number,z:number)=>buildingColliders.some(b=>Math.abs(x-b.x)<b.half+.72&&Math.abs(z-b.z)<b.half+.72);function animate(){const dt=Math.min(clock.getDelta(),.05);let dx=0,dz=0;if(keys.w||keys.arrowup)dz-=1;if(keys.s||keys.arrowdown)dz+=1;if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;const moving=dx||dz;const len=Math.hypot(dx,dz)||1;const nx=THREE.MathUtils.clamp(player.position.x+dx/len*10*dt,-285,285);const nz=THREE.MathUtils.clamp(player.position.z+dz/len*10*dt,-285,285);if(!collides(nx,player.position.z))player.position.x=nx;if(!collides(player.position.x,nz))player.position.z=nz;if(moving){player.rotation.y=Math.atan2(dx,dz);walkTime+=dt*9;const mixer=player.userData.mixer;const action=player.userData.action;if(action){if(!action.isRunning())action.reset().fadeIn(.16).play();}else{player.traverse((o:any)=>{const n=(o.name||"").toLowerCase();if(n.includes("upperarm_l")||n.includes("upperarm_r")||n==="arm_l"||n==="arm_r")o.rotation.x=Math.sin(walkTime)*.22;if(n.includes("thigh_l"))o.rotation.x=-Math.sin(walkTime)*.28;if(n.includes("thigh_r"))o.rotation.x=Math.sin(walkTime)*.28;if(o.name==="arm")o.rotation.x=Math.sin(walkTime)*.42;if(o.name==="leg")o.rotation.x=-Math.sin(walkTime)*.5})}}else{const action=player.userData.action;if(action)action.fadeOut(.18);player.traverse((o:any)=>{if(o.name==="arm")o.rotation.x=0;if(o.name==="leg")o.rotation.x=0});player.position.y=0}if(player.userData.mixer)player.userData.mixer.update(dt)
+  const clock=new THREE.Clock();let raf=0;let walkTime=0;const collides=(x:number,z:number)=>buildingColliders.some(b=>Math.abs(x-b.x)<b.half+.72&&Math.abs(z-b.z)<b.half+.72);function animate(){const dt=Math.min(clock.getDelta(),.05);let dx=0,dz=0;if(keys.w||keys.arrowup)dz-=1;if(keys.s||keys.arrowdown)dz+=1;if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;const moving=dx||dz;const len=Math.hypot(dx,dz)||1;const nx=THREE.MathUtils.clamp(player.position.x+dx/len*10*dt,-285,285);const nz=THREE.MathUtils.clamp(player.position.z+dz/len*10*dt,-285,285);if(!collides(nx,player.position.z))player.position.x=nx;if(!collides(player.position.x,nz))player.position.z=nz;if(moving){player.rotation.y=Math.atan2(dx,dz);walkTime+=dt*9;const mixer=player.userData.mixer as THREE.AnimationMixer;const action=player.userData.walk;if(action&&player.userData.activeAction!==action){player.userData.activeAction?.fadeOut(.16);action.reset().fadeIn(.16).play();player.userData.activeAction=action;}}else{const action=player.userData.idle;if(action&&player.userData.activeAction!==action){player.userData.activeAction?.fadeOut(.16);action.reset().fadeIn(.16).play();player.userData.activeAction=action;}player.position.y=0}if(player.userData.mixer)player.userData.mixer.update(dt)
     for(const t of traffic){if(t.axis==="x"){t.g.position.x+=t.speed*dt;if(t.g.position.x>300)t.g.position.x=-300;if(t.g.position.x<-300)t.g.position.x=300}else{t.g.position.z+=t.speed*dt;if(t.g.position.z>300)t.g.position.z=-300;if(t.g.position.z<-300)t.g.position.z=300}}
     for(let i=0;i<npcs.length;i++){const n=npcs[i];if(n.userData.axis==="x")n.position.x+=n.userData.v*dt;else n.position.z+=n.userData.v*dt;if(n.position.x>270||n.position.x<-270)n.userData.v*=-1;if(n.position.z>270||n.position.z<-270)n.userData.v*=-1;n.rotation.y=n.userData.axis==="x"?(n.userData.v>0?Math.PI/2:-Math.PI/2):(n.userData.v>0?0:Math.PI)}
     camera.position.lerp(new THREE.Vector3(player.position.x+Math.sin(player.rotation.y)*4,5.5,player.position.z+Math.cos(player.rotation.y)*12),.09);camera.lookAt(player.position.x,1.15,player.position.z);renderer.render(scene,camera);raf=requestAnimationFrame(animate)}
