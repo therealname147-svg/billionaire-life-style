@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import * as THREE from "three";
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 
 const locations=[["CENTRAL BANK","Bank"],["EMPLOYMENT CENTRE","Jobs"],["CITY MARKET","Market"],["LUXURY AUTOS","Cars"],["COASTAL CAFE","Cafe"],["APARTMENTS","Home"],["AIRPORT","Travel"]];
 
@@ -131,9 +132,23 @@ export default function Home(){
   for(let i=0;i<30;i++){const axis=i%2?"z":"x";const g=makeCar(colors[i%colors.length]);const lane=(i%4<2?-1:1)*(i%7%2?5:2.7);const speed=(9+i%5*1.4)*(i%3?1:-1);g.position.set(axis==="x"?-285:lane,.0,axis==="z"?-285:lane);if(axis==="x")g.rotation.y=speed>0?Math.PI/2:-Math.PI/2;else g.rotation.y=speed>0?0:Math.PI;scene.add(g);traffic.push({g,axis,speed,lane})}
   const npcSkins=[0x704a35,0x8a5b40,0x5c3c2e,0x9a6b4c];const npcs:THREE.Group[]=[];
   for(let i=0;i<44;i++){const n=makePerson(npcSkins[i%4],[0x263f50,0x8b4a3b,0x5d426d,0x75643f,0xeeeeea][i%5],[0x222a32,0x3c3030,0x4b3a29][i%3]);n.position.set(((i*47)%500)-250,0,((i*71)%500)-250);n.userData.v=.45+(i%4)*.12;n.userData.axis=i%2?"x":"z";npcs.push(n);scene.add(n)}
-  const player=makePlayerCharacter();player.position.set(0,0,7);scene.add(player);
+  const player=new THREE.Group();
+  player.position.set(0,0,7);player.userData.isPlayer=true;scene.add(player);
+  const loader=new GLTFLoader();
+  const characterUrl="https://raw.githubusercontent.com/Flynsarmy/gd-character-creation/master/Godot/Character%20Creation/characters/human/human_female/human_female.glb";
+  loader.load(characterUrl,(gltf)=>{
+    const model=gltf.scene;
+    model.traverse((o:any)=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.needsUpdate=true}}});
+    const box=new THREE.Box3().setFromObject(model);const size=box.getSize(new THREE.Vector3());const center=box.getCenter(new THREE.Vector3());
+    const targetHeight=2.35;const scale=targetHeight/Math.max(size.y,.001);model.scale.setScalar(scale);
+    model.position.x=-center.x*scale;model.position.y=-box.min.y*scale;model.position.z=-center.z*scale;
+    player.add(model);
+    player.userData.model=model;
+    if(gltf.animations.length){player.userData.mixer=new THREE.AnimationMixer(model);const clips=gltf.animations;const preferred=clips.find((c)=>/walk|jog|run/i.test(c.name))||clips[0];player.userData.action=player.userData.mixer.clipAction(preferred);player.userData.action.loop=THREE.LoopRepeat;}
+    setNotice("Character loaded");
+  },undefined,()=>setNotice("Character asset could not load"));
   const keys:Record<string,boolean>={};const down=(e:KeyboardEvent)=>{keys[e.key.toLowerCase()]=true};const up=(e:KeyboardEvent)=>{keys[e.key.toLowerCase()]=false};addEventListener("keydown",down);addEventListener("keyup",up);
-  const clock=new THREE.Clock();let raf=0;let walkTime=0;const collides=(x:number,z:number)=>buildingColliders.some(b=>Math.abs(x-b.x)<b.half+.72&&Math.abs(z-b.z)<b.half+.72);function animate(){const dt=Math.min(clock.getDelta(),.05);let dx=0,dz=0;if(keys.w||keys.arrowup)dz-=1;if(keys.s||keys.arrowdown)dz+=1;if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;const moving=dx||dz;const len=Math.hypot(dx,dz)||1;const nx=THREE.MathUtils.clamp(player.position.x+dx/len*10*dt,-285,285);const nz=THREE.MathUtils.clamp(player.position.z+dz/len*10*dt,-285,285);if(!collides(nx,player.position.z))player.position.x=nx;if(!collides(player.position.x,nz))player.position.z=nz;if(moving){player.rotation.y=Math.atan2(dx,dz);walkTime+=dt*9;player.traverse(o=>{if(o.name==="arm")o.rotation.x=Math.sin(walkTime)*.42;if(o.name==="leg")o.rotation.x=-Math.sin(walkTime)*.5})}else{player.traverse(o=>{if(o.name==="arm")o.rotation.x=0;if(o.name==="leg")o.rotation.x=0});player.position.y=0}
+  const clock=new THREE.Clock();let raf=0;let walkTime=0;const collides=(x:number,z:number)=>buildingColliders.some(b=>Math.abs(x-b.x)<b.half+.72&&Math.abs(z-b.z)<b.half+.72);function animate(){const dt=Math.min(clock.getDelta(),.05);let dx=0,dz=0;if(keys.w||keys.arrowup)dz-=1;if(keys.s||keys.arrowdown)dz+=1;if(keys.a||keys.arrowleft)dx-=1;if(keys.d||keys.arrowright)dx+=1;const moving=dx||dz;const len=Math.hypot(dx,dz)||1;const nx=THREE.MathUtils.clamp(player.position.x+dx/len*10*dt,-285,285);const nz=THREE.MathUtils.clamp(player.position.z+dz/len*10*dt,-285,285);if(!collides(nx,player.position.z))player.position.x=nx;if(!collides(player.position.x,nz))player.position.z=nz;if(moving){player.rotation.y=Math.atan2(dx,dz);walkTime+=dt*9;const mixer=player.userData.mixer;const action=player.userData.action;if(action){if(!action.isRunning())action.reset().fadeIn(.16).play();}else{player.traverse((o:any)=>{const n=(o.name||"").toLowerCase();if(n.includes("upperarm_l")||n.includes("upperarm_r")||n==="arm_l"||n==="arm_r")o.rotation.x=Math.sin(walkTime)*.22;if(n.includes("thigh_l"))o.rotation.x=-Math.sin(walkTime)*.28;if(n.includes("thigh_r"))o.rotation.x=Math.sin(walkTime)*.28;if(o.name==="arm")o.rotation.x=Math.sin(walkTime)*.42;if(o.name==="leg")o.rotation.x=-Math.sin(walkTime)*.5})}}else{const action=player.userData.action;if(action)action.fadeOut(.18);player.traverse((o:any)=>{if(o.name==="arm")o.rotation.x=0;if(o.name==="leg")o.rotation.x=0});player.position.y=0}if(player.userData.mixer)player.userData.mixer.update(dt)
     for(const t of traffic){if(t.axis==="x"){t.g.position.x+=t.speed*dt;if(t.g.position.x>300)t.g.position.x=-300;if(t.g.position.x<-300)t.g.position.x=300}else{t.g.position.z+=t.speed*dt;if(t.g.position.z>300)t.g.position.z=-300;if(t.g.position.z<-300)t.g.position.z=300}}
     for(let i=0;i<npcs.length;i++){const n=npcs[i];if(n.userData.axis==="x")n.position.x+=n.userData.v*dt;else n.position.z+=n.userData.v*dt;if(n.position.x>270||n.position.x<-270)n.userData.v*=-1;if(n.position.z>270||n.position.z<-270)n.userData.v*=-1;n.rotation.y=n.userData.axis==="x"?(n.userData.v>0?Math.PI/2:-Math.PI/2):(n.userData.v>0?0:Math.PI)}
     camera.position.lerp(new THREE.Vector3(player.position.x+Math.sin(player.rotation.y)*4,5.5,player.position.z+Math.cos(player.rotation.y)*12),.09);camera.lookAt(player.position.x,1.15,player.position.z);renderer.render(scene,camera);raf=requestAnimationFrame(animate)}
